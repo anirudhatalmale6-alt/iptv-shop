@@ -49,10 +49,11 @@ interface ProductFormProps {
   taxRate: number;
 }
 
-const DURATION_LABELS: Record<number, { name: string; desc: string }> = {
-  1: { name: "1 Maand", desc: "Volledige toegang voor 1 maand" },
-  3: { name: "3 Maanden", desc: "Bespaar met ons kwartaalabonnement" },
-  12: { name: "12 Maanden", desc: "Beste waarde - een vol jaar IPTV" },
+const DURATION_LABELS: Record<number, string> = {
+  1: "1 Maand",
+  3: "3 Maanden",
+  6: "6 Maanden",
+  12: "12 Maanden",
 };
 
 export default function ProductForm({
@@ -118,11 +119,7 @@ export default function ProductForm({
 
   const validateFields = (): boolean => {
     const newErrors: Record<string, string> = {};
-
-    if (!selectedOptionId) {
-      return false;
-    }
-
+    if (!selectedOptionId) return false;
     if (selectedPlayerType) {
       for (const field of selectedPlayerType.fields) {
         if (field.required && !fieldValues[field.name]?.trim()) {
@@ -130,7 +127,6 @@ export default function ProductForm({
         }
       }
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -147,8 +143,7 @@ export default function ProductForm({
       playerTypeId: selectedPlayerType?.id,
       playerTypeName: selectedPlayerType?.name,
       playerMac: fieldValues["mac"] || fieldValues["mac_address"] || undefined,
-      playerDeviceKey:
-        fieldValues["device_key"] || fieldValues["deviceKey"] || undefined,
+      playerDeviceKey: fieldValues["device_key"] || fieldValues["deviceKey"] || undefined,
       quantity: 1,
       price: currentPrice,
     };
@@ -170,19 +165,20 @@ export default function ProductForm({
   };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-5">
       {/* Screen Toggle */}
       {screenCounts.length > 1 && (
-        <div className="flex justify-center">
-          <div className="inline-flex items-center bg-gray-100 rounded-full p-1.5">
+        <div>
+          <label className="block text-sm font-semibold text-foreground mb-2">Aantal schermen</label>
+          <div className="flex gap-2">
             {screenCounts.map((count) => (
               <button
                 key={count}
                 onClick={() => handleScreenChange(count)}
-                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
                   selectedScreens === count
-                    ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "border-purple-500 bg-purple-50 text-purple-700"
+                    : "border-gray-200 text-gray-600 hover:border-gray-300"
                 }`}
               >
                 {count === 1 ? "1 Scherm" : `${count} Schermen`}
@@ -192,92 +188,72 @@ export default function ProductForm({
         </div>
       )}
 
-      {/* Duration Pricing Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        {filteredOptions.map((option) => {
-          const label = DURATION_LABELS[option.duration] || {
-            name: option.name,
-            desc: "",
-          };
-          const isSelected = selectedOptionId === option.id;
+      {/* Duration Options - Radio style list */}
+      <div>
+        <label className="block text-sm font-semibold text-foreground mb-2">Kies looptijd</label>
+        <div className="space-y-2">
+          {filteredOptions.map((option) => {
+            const isSelected = selectedOptionId === option.id;
+            const label = DURATION_LABELS[option.duration] || option.name;
 
-          return (
-            <button
-              key={option.id}
-              onClick={() => setSelectedOptionId(option.id)}
-              className={`relative text-left p-6 rounded-2xl border-2 transition-all duration-200 ${
-                isSelected
-                  ? "border-primary-500 bg-primary-50/50 shadow-lg shadow-purple-500/10 -translate-y-1"
-                  : "border-gray-200 bg-white hover:border-primary-300 hover:shadow-md"
-              }`}
-            >
-              {option.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-full shadow-md">
-                    <Star className="w-3 h-3 fill-white" />
-                    Populair
-                  </span>
+            return (
+              <button
+                key={option.id}
+                onClick={() => setSelectedOptionId(option.id)}
+                className={`w-full flex items-center justify-between p-3.5 rounded-xl border-2 transition-all text-left ${
+                  isSelected
+                    ? "border-purple-500 bg-purple-50/50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                    isSelected ? "border-purple-500" : "border-gray-300"
+                  }`}>
+                    {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />}
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-foreground">{label}</span>
+                    {option.duration > 1 && (
+                      <span className="text-xs text-muted ml-2">
+                        ({currencySymbol}{(option.price / option.duration).toFixed(2)}/mnd)
+                      </span>
+                    )}
+                  </div>
                 </div>
-              )}
-
-              <div className="text-center">
-                <h3 className="text-lg font-bold text-foreground mb-1">
-                  {label.name}
-                </h3>
-                <p className="text-xs text-muted mb-4">{label.desc}</p>
-
-                <div className="mb-5">
-                  <span className="text-3xl font-bold gradient-text">
-                    {currencySymbol}
-                    {option.price.toFixed(2)}
-                  </span>
-                  {option.duration > 1 && (
-                    <p className="text-xs text-muted mt-1">
-                      {currencySymbol}
-                      {(option.price / option.duration).toFixed(2)} / maand
-                    </p>
+                <div className="flex items-center gap-2">
+                  {option.popular && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] font-bold rounded-full">
+                      <Star className="w-2.5 h-2.5 fill-white" />
+                      Populair
+                    </span>
                   )}
+                  <span className="text-sm font-bold text-foreground">
+                    {currencySymbol}{option.price.toFixed(2)}
+                  </span>
                 </div>
-
-                <div
-                  className={`py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                    isSelected
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  {isSelected ? "Geselecteerd" : "Selecteer"}
-                </div>
-              </div>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted mt-1.5">incl. {taxRate}% {taxName}</p>
       </div>
 
-      <p className="text-center text-xs text-muted">
-        incl. {taxRate}% {taxName}
-      </p>
-
-      {/* Player Type Selection */}
+      {/* Player Type */}
       {playerTypes.length > 0 && (
         <div>
-          <label
-            htmlFor="player-type"
-            className="block text-sm font-semibold text-foreground mb-3"
-          >
+          <label htmlFor="player-type" className="block text-sm font-semibold text-foreground mb-2">
             Kies je speler type
           </label>
           <select
             id="player-type"
             value={selectedPlayerTypeId}
             onChange={(e) => handlePlayerTypeChange(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-foreground focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all duration-200 appearance-none cursor-pointer"
+            className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-foreground focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all appearance-none cursor-pointer text-sm"
           >
             <option value="">-- Selecteer speler type --</option>
             {playerTypes.map((pt) => (
-              <option key={pt.id} value={pt.id}>
-                {pt.name}
-              </option>
+              <option key={pt.id} value={pt.id}>{pt.name}</option>
             ))}
           </select>
         </div>
@@ -285,21 +261,16 @@ export default function ProductForm({
 
       {/* Dynamic Player Fields */}
       {selectedPlayerType && selectedPlayerType.fields.length > 0 && (
-        <div className="space-y-4 p-5 bg-primary-50/50 rounded-xl border border-primary-100">
+        <div className="space-y-3 p-4 bg-primary-50/50 rounded-xl border border-primary-100">
           <h4 className="text-sm font-semibold text-primary-800 flex items-center gap-2">
             <Info className="w-4 h-4" />
             {selectedPlayerType.name} gegevens
           </h4>
           {selectedPlayerType.fields.map((field) => (
             <div key={field.name}>
-              <label
-                htmlFor={`field-${field.name}`}
-                className="block text-sm font-medium text-foreground mb-1.5"
-              >
+              <label htmlFor={`field-${field.name}`} className="block text-sm font-medium text-foreground mb-1">
                 {field.label}
-                {field.required && (
-                  <span className="text-red-500 ml-1">*</span>
-                )}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
               </label>
               <input
                 id={`field-${field.name}`}
@@ -307,16 +278,14 @@ export default function ProductForm({
                 placeholder={field.placeholder}
                 value={fieldValues[field.name] || ""}
                 onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                className={`w-full px-4 py-3 rounded-xl border-2 bg-white text-foreground placeholder:text-gray-400 outline-none transition-all duration-200 ${
+                className={`w-full px-3 py-2.5 rounded-lg border-2 bg-white text-foreground placeholder:text-gray-400 outline-none transition-all text-sm ${
                   errors[field.name]
-                    ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-                    : "border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                    ? "border-red-400 focus:border-red-500"
+                    : "border-gray-200 focus:border-primary-500"
                 }`}
               />
               {errors[field.name] && (
-                <p className="mt-1.5 text-sm text-red-600">
-                  {errors[field.name]}
-                </p>
+                <p className="mt-1 text-xs text-red-600">{errors[field.name]}</p>
               )}
             </div>
           ))}
@@ -324,37 +293,32 @@ export default function ProductForm({
       )}
 
       {/* Player Setup Guide */}
-      {selectedPlayerType &&
-        (selectedPlayerType.guideTitle || selectedPlayerType.guideText) && (
-          <div className="p-5 bg-white rounded-2xl border border-primary-100 shadow-lg">
-            {selectedPlayerType.guideTitle && (
-              <h4 className="text-lg font-bold text-foreground mb-3">
-                {selectedPlayerType.guideTitle}
-              </h4>
-            )}
-            {selectedPlayerType.guideText && (
-              <div
-                className="text-sm text-muted leading-relaxed prose prose-sm max-w-none mb-4"
-                dangerouslySetInnerHTML={{
-                  __html: selectedPlayerType.guideText,
-                }}
-              />
-            )}
-            {selectedPlayerType.guideImages.length > 0 && (
-              <ImageSlider
-                images={selectedPlayerType.guideImages}
-                alt={`${selectedPlayerType.name} setup guide`}
-                autoPlay={false}
-              />
-            )}
-          </div>
-        )}
+      {selectedPlayerType && (selectedPlayerType.guideTitle || selectedPlayerType.guideText) && (
+        <div className="p-4 bg-white rounded-xl border border-primary-100 shadow-sm">
+          {selectedPlayerType.guideTitle && (
+            <h4 className="text-sm font-bold text-foreground mb-2">{selectedPlayerType.guideTitle}</h4>
+          )}
+          {selectedPlayerType.guideText && (
+            <div
+              className="text-xs text-muted leading-relaxed prose prose-sm max-w-none mb-3"
+              dangerouslySetInnerHTML={{ __html: selectedPlayerType.guideText }}
+            />
+          )}
+          {selectedPlayerType.guideImages.length > 0 && (
+            <ImageSlider
+              images={selectedPlayerType.guideImages}
+              alt={`${selectedPlayerType.name} setup guide`}
+              autoPlay={false}
+            />
+          )}
+        </div>
+      )}
 
-      {/* Add to Cart Button */}
+      {/* Add to Cart */}
       <button
         onClick={handleAddToCart}
         disabled={addedToCart || !selectedOptionId}
-        className={`w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center gap-3 ${
+        className={`w-full py-3.5 px-6 rounded-xl font-semibold text-base transition-all duration-300 flex items-center justify-center gap-3 ${
           addedToCart
             ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
             : !selectedOptionId
@@ -364,12 +328,12 @@ export default function ProductForm({
       >
         {addedToCart ? (
           <>
-            <Check className="w-6 h-6" />
+            <Check className="w-5 h-5" />
             Toegevoegd aan winkelwagen!
           </>
         ) : (
           <>
-            <ShoppingCart className="w-6 h-6" />
+            <ShoppingCart className="w-5 h-5" />
             {selectedOption
               ? `Bestellen — ${currencySymbol}${currentPrice.toFixed(2)}`
               : "Kies eerst een abonnement"}

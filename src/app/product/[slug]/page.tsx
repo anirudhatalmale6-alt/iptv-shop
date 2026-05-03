@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import ProductForm from "./ProductForm";
+import ProductGallery from "./ProductGallery";
 
 interface PlayerField {
   name: string;
@@ -18,16 +18,11 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-
   const product = await prisma.product.findUnique({
     where: { slug, active: true },
     select: { name: true, description: true },
   });
-
-  if (!product) {
-    return { title: "Product niet gevonden" };
-  }
-
+  if (!product) return { title: "Product niet gevonden" };
   return {
     title: `${product.name} | IPTV Shop`,
     description: product.description.slice(0, 160),
@@ -58,13 +53,19 @@ export default async function ProductDetailPage({
     prisma.siteSettings.findFirst(),
   ]);
 
-  if (!product) {
-    notFound();
-  }
+  if (!product) notFound();
 
   const currencySymbol = settings?.currencySymbol ?? "€";
   const taxName = settings?.taxName ?? "BTW";
   const taxRate = settings?.taxRate ? Number(settings.taxRate) : 21;
+
+  const allImages: string[] = [];
+  if (product.image) allImages.push(product.image);
+  if (product.images) {
+    for (const img of product.images) {
+      if (!allImages.includes(img)) allImages.push(img);
+    }
+  }
 
   const productData = {
     id: product.id,
@@ -94,9 +95,14 @@ export default async function ProductDetailPage({
     guideImages: pt.guideImages,
   }));
 
+  const descriptionLines = product.description
+    .split("\n")
+    .map((line: string) => line.trim())
+    .filter((line: string) => line.length > 0);
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-muted hover:text-primary-600 font-medium mb-8 transition-colors duration-200"
@@ -105,36 +111,57 @@ export default async function ProductDetailPage({
           Terug naar overzicht
         </Link>
 
-        {/* Product Header */}
-        <div className="text-center mb-10">
-          {product.image && (
-            <div className="relative w-32 h-32 mx-auto mb-6 rounded-2xl overflow-hidden bg-white shadow-lg border border-primary-100">
-              <Image
-                src={product.image}
-                alt={product.name}
-                fill
-                className="object-contain p-3"
-                sizes="128px"
-                priority
-              />
-            </div>
-          )}
-          <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
-            Onze <span className="gradient-text">Abonnementen</span>
-          </h1>
-          <p className="text-muted text-lg max-w-2xl mx-auto">
-            {product.description}
-          </p>
-        </div>
+        {/* Two-column layout: Gallery | Product Info */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-12">
+          {/* Left: Image Gallery */}
+          <ProductGallery images={allImages} productName={product.name} />
 
-        {/* Interactive Form */}
-        <ProductForm
-          product={productData}
-          playerTypes={playerTypesData}
-          currencySymbol={currencySymbol}
-          taxName={taxName}
-          taxRate={taxRate}
-        />
+          {/* Right: Product Info */}
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
+              {product.name}
+            </h1>
+
+            <div className="flex items-baseline gap-2 mb-4">
+              <span className="text-3xl font-bold gradient-text">
+                {currencySymbol}{Number(product.price).toFixed(2)}
+              </span>
+              <span className="text-sm text-muted">incl. {taxRate}% {taxName}</span>
+            </div>
+
+            <div className="mb-6">
+              {descriptionLines.map((line: string, idx: number) => {
+                const isBullet = line.startsWith("-") || line.startsWith("•");
+                if (isBullet) {
+                  const text = line.replace(/^[-•]\s*/, "");
+                  const isBold = text.includes("\n") === false && text.split(" ").length <= 4;
+                  return (
+                    <div key={idx} className="flex items-start gap-2 py-1">
+                      <span className="text-primary-600 mt-1">•</span>
+                      <span className={`text-sm ${isBold ? "font-semibold text-foreground" : "text-muted"}`}>
+                        {text}
+                      </span>
+                    </div>
+                  );
+                }
+                return (
+                  <p key={idx} className="text-sm text-muted leading-relaxed mb-1">
+                    {line}
+                  </p>
+                );
+              })}
+            </div>
+
+            {/* Pricing & Options Form */}
+            <ProductForm
+              product={productData}
+              playerTypes={playerTypesData}
+              currencySymbol={currencySymbol}
+              taxName={taxName}
+              taxRate={taxRate}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
