@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String   @db.Text
+  image       String?
+  images      String[] @default([])
+  price       Decimal  @db.Decimal(10, 2)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  options    ProductOption[]
+  orderItems OrderItem[]
+}
+
+model ProductOption {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  price     Decimal @db.Decimal(10, 2)
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  orderItems OrderItem[]
+}
+
+model PlayerType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  fields      Json
+  guideTitle  String?
+  guideText   String?  @db.Text
+  guideImages String[] @default([])
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  customerEmail   String
+  customerName    String
+  status          OrderStatus @default(PENDING)
+  subtotal        Decimal     @db.Decimal(10, 2)
+  taxAmount       Decimal     @db.Decimal(10, 2)
+  total           Decimal     @db.Decimal(10, 2)
+  stripeSessionId String?     @unique
+  stripePaymentId String?
+  notes           String?     @db.Text
+  confirmedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items OrderItem[]
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+model OrderItem {
+  id              String         @id @default(cuid())
+  orderId         String
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product        @relation(fields: [productId], references: [id])
+  optionId        String?
+  option          ProductOption? @relation(fields: [optionId], references: [id])
+  playerTypeId    String?
+  playerType      PlayerType?    @relation(fields: [playerTypeId], references: [id])
+  playerMac       String?
+  playerDeviceKey String?
+  quantity        Int            @default(1)
+  price           Decimal        @db.Decimal(10, 2)
+}
+
+model SiteSettings {
+  id               String  @id @default("default")
+  siteName         String  @default("IPTV Shop")
+  seoTitle         String  @default("IPTV Shop")
+  seoDescription   String  @default("")
+  seoKeywords      String  @default("")
+  favicon          String?
+  taxEnabled       Boolean @default(true)
+  taxRate          Decimal @db.Decimal(5, 2) @default(21)
+  taxName          String  @default("BTW")
+  smtpHost         String  @default("")
+  smtpPort         Int     @default(587)
+  smtpUser         String  @default("")
+  smtpPass         String  @default("")
+  smtpFrom         String  @default("")
+  smtpFromName     String  @default("")
+  stripePublicKey  String  @default("")
+  stripeSecretKey  String  @default("")
+  confirmEmailText String  @default("Your order has been confirmed! Thank you for your purchase.") @db.Text
+  currency         String  @default("EUR")
+  currencySymbol   String  @default("€")
+  updatedAt        DateTime @updatedAt
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+}
+
+model Page {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  content   String   @db.Text
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FaqItem {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String   @db.Text
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
