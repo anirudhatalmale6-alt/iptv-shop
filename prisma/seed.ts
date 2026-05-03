@@ -35,23 +35,36 @@ async function main() {
     },
   })
 
-  const product = await prisma.product.upsert({
-    where: { slug: 'iptv-abonnement' },
-    update: {},
-    create: {
-      name: 'IPTV Abonnement',
-      slug: 'iptv-abonnement',
-      description: 'Premium IPTV abonnement met toegang tot duizenden live kanalen, films en series in HD en 4K kwaliteit. Inclusief EPG (elektronische programmagids) en catch-up TV.',
-      price: 9.99,
-      active: true,
-      options: {
-        create: [
-          { name: 'Single Connection', price: 9.99, sortOrder: 0 },
-          { name: '2 Connections', price: 14.99, sortOrder: 1 },
-          { name: '3 Connections', price: 19.99, sortOrder: 2 },
-        ],
+  let product = await prisma.product.findUnique({ where: { slug: 'iptv-abonnement' } })
+  if (!product) {
+    product = await prisma.product.create({
+      data: {
+        name: 'IPTV Abonnement',
+        slug: 'iptv-abonnement',
+        description: 'Premium IPTV abonnement met toegang tot duizenden live kanalen, films en series in HD en 4K kwaliteit. Inclusief EPG (elektronische programmagids) en catch-up TV.',
+        price: 14.99,
+        active: true,
       },
-    },
+    })
+  }
+
+  // Delete old options and create new pricing matrix
+  await prisma.productOption.deleteMany({ where: { productId: product.id } })
+  await prisma.productOption.createMany({
+    data: [
+      // 1 Screen options
+      { productId: product.id, name: '1 Maand IPTV', price: 14.99, screens: 1, duration: 1, popular: false, sortOrder: 0 },
+      { productId: product.id, name: '3 Maanden IPTV', price: 34.99, screens: 1, duration: 3, popular: true, sortOrder: 1 },
+      { productId: product.id, name: '12 Maanden IPTV', price: 89.99, screens: 1, duration: 12, popular: false, sortOrder: 2 },
+      // 2 Screens options
+      { productId: product.id, name: '1 Maand IPTV - 2 Schermen', price: 19.99, screens: 2, duration: 1, popular: false, sortOrder: 3 },
+      { productId: product.id, name: '3 Maanden IPTV - 2 Schermen', price: 49.99, screens: 2, duration: 3, popular: true, sortOrder: 4 },
+      { productId: product.id, name: '12 Maanden IPTV - 2 Schermen', price: 119.99, screens: 2, duration: 12, popular: false, sortOrder: 5 },
+      // 3 Screens options
+      { productId: product.id, name: '1 Maand IPTV - 3 Schermen', price: 24.99, screens: 3, duration: 1, popular: false, sortOrder: 6 },
+      { productId: product.id, name: '3 Maanden IPTV - 3 Schermen', price: 64.99, screens: 3, duration: 3, popular: true, sortOrder: 7 },
+      { productId: product.id, name: '12 Maanden IPTV - 3 Schermen', price: 149.99, screens: 3, duration: 12, popular: false, sortOrder: 8 },
+    ],
   })
 
   const playerTypes = [

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ShoppingCart, Check, Info } from "lucide-react";
+import { ShoppingCart, Check, Info, Star } from "lucide-react";
 import ImageSlider from "@/components/ImageSlider";
 
 interface PlayerField {
@@ -25,6 +25,9 @@ interface ProductOptionData {
   id: string;
   name: string;
   price: number;
+  screens: number;
+  duration: number;
+  popular: boolean;
   sortOrder: number;
 }
 
@@ -46,6 +49,12 @@ interface ProductFormProps {
   taxRate: number;
 }
 
+const DURATION_LABELS: Record<number, { name: string; desc: string }> = {
+  1: { name: "1 Maand", desc: "Volledige toegang voor 1 maand" },
+  3: { name: "3 Maanden", desc: "Bespaar met ons kwartaalabonnement" },
+  12: { name: "12 Maanden", desc: "Beste waarde - een vol jaar IPTV" },
+};
+
 export default function ProductForm({
   product,
   playerTypes,
@@ -53,13 +62,25 @@ export default function ProductForm({
   taxName,
   taxRate,
 }: ProductFormProps) {
-  const [selectedOptionId, setSelectedOptionId] = useState<string>(
-    product.options.length > 0 ? product.options[0].id : ""
-  );
+  const screenCounts = useMemo(() => {
+    const counts = [...new Set(product.options.map((o) => o.screens))].sort();
+    return counts.length > 0 ? counts : [1];
+  }, [product.options]);
+
+  const [selectedScreens, setSelectedScreens] = useState(screenCounts[0]);
+  const [selectedOptionId, setSelectedOptionId] = useState<string>("");
   const [selectedPlayerTypeId, setSelectedPlayerTypeId] = useState<string>("");
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [addedToCart, setAddedToCart] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const filteredOptions = useMemo(
+    () =>
+      product.options
+        .filter((o) => o.screens === selectedScreens)
+        .sort((a, b) => a.duration - b.duration),
+    [product.options, selectedScreens]
+  );
 
   const selectedOption = useMemo(
     () => product.options.find((o) => o.id === selectedOptionId),
@@ -71,9 +92,12 @@ export default function ProductForm({
     [playerTypes, selectedPlayerTypeId]
   );
 
-  const currentPrice = selectedOption
-    ? selectedOption.price
-    : product.price;
+  const currentPrice = selectedOption ? selectedOption.price : product.price;
+
+  const handleScreenChange = (screens: number) => {
+    setSelectedScreens(screens);
+    setSelectedOptionId("");
+  };
 
   const handlePlayerTypeChange = (playerTypeId: string) => {
     setSelectedPlayerTypeId(playerTypeId);
@@ -93,12 +117,17 @@ export default function ProductForm({
   };
 
   const validateFields = (): boolean => {
-    if (!selectedPlayerType) return true;
-
     const newErrors: Record<string, string> = {};
-    for (const field of selectedPlayerType.fields) {
-      if (field.required && !fieldValues[field.name]?.trim()) {
-        newErrors[field.name] = `${field.label} is verplicht`;
+
+    if (!selectedOptionId) {
+      return false;
+    }
+
+    if (selectedPlayerType) {
+      for (const field of selectedPlayerType.fields) {
+        if (field.required && !fieldValues[field.name]?.trim()) {
+          newErrors[field.name] = `${field.label} is verplicht`;
+        }
       }
     }
 
@@ -107,6 +136,7 @@ export default function ProductForm({
   };
 
   const handleAddToCart = () => {
+    if (!selectedOptionId) return;
     if (!validateFields()) return;
 
     const cartItem = {
@@ -123,7 +153,6 @@ export default function ProductForm({
       price: currentPrice,
     };
 
-    // Save to localStorage
     try {
       const existing = JSON.parse(localStorage.getItem("cart") || "[]");
       const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -131,7 +160,6 @@ export default function ProductForm({
       localStorage.setItem("cart", JSON.stringify(existing));
       window.dispatchEvent(new Event("cart-updated"));
     } catch {
-      // fallback
       const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       localStorage.setItem("cart", JSON.stringify([{ ...cartItem, id }]));
       window.dispatchEvent(new Event("cart-updated"));
@@ -142,69 +170,93 @@ export default function ProductForm({
   };
 
   return (
-    <div className="space-y-8">
-      {/* Price Display */}
-      <div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold gradient-text">
-            {currencySymbol}
-            {currentPrice.toFixed(2)}
-          </span>
-          <span className="text-sm text-muted">
-            incl. {taxRate}% {taxName}
-          </span>
-        </div>
-      </div>
-
-      {/* Connection Options */}
-      {product.options.length > 0 && (
-        <div>
-          <label className="block text-sm font-semibold text-foreground mb-3">
-            Kies je verbinding
-          </label>
-          <div className="space-y-3">
-            {product.options.map((option) => (
-              <label
-                key={option.id}
-                className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                  selectedOptionId === option.id
-                    ? "border-primary-500 bg-primary-50 shadow-sm"
-                    : "border-gray-200 hover:border-primary-200 hover:bg-gray-50"
+    <div className="space-y-10">
+      {/* Screen Toggle */}
+      {screenCounts.length > 1 && (
+        <div className="flex justify-center">
+          <div className="inline-flex items-center bg-gray-100 rounded-full p-1.5">
+            {screenCounts.map((count) => (
+              <button
+                key={count}
+                onClick={() => handleScreenChange(count)}
+                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+                  selectedScreens === count
+                    ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="product-option"
-                  value={option.id}
-                  checked={selectedOptionId === option.id}
-                  onChange={() => setSelectedOptionId(option.id)}
-                  className="sr-only"
-                />
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                    selectedOptionId === option.id
-                      ? "border-primary-600 bg-primary-600"
-                      : "border-gray-300"
-                  }`}
-                >
-                  {selectedOptionId === option.id && (
-                    <div className="w-2 h-2 rounded-full bg-white" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <span className="font-medium text-foreground">
-                    {option.name}
-                  </span>
-                </div>
-                <span className="font-semibold text-primary-700">
-                  {currencySymbol}
-                  {option.price.toFixed(2)}
-                </span>
-              </label>
+                {count === 1 ? "1 Scherm" : `${count} Schermen`}
+              </button>
             ))}
           </div>
         </div>
       )}
+
+      {/* Duration Pricing Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        {filteredOptions.map((option) => {
+          const label = DURATION_LABELS[option.duration] || {
+            name: option.name,
+            desc: "",
+          };
+          const isSelected = selectedOptionId === option.id;
+
+          return (
+            <button
+              key={option.id}
+              onClick={() => setSelectedOptionId(option.id)}
+              className={`relative text-left p-6 rounded-2xl border-2 transition-all duration-200 ${
+                isSelected
+                  ? "border-primary-500 bg-primary-50/50 shadow-lg shadow-purple-500/10 -translate-y-1"
+                  : "border-gray-200 bg-white hover:border-primary-300 hover:shadow-md"
+              }`}
+            >
+              {option.popular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-full shadow-md">
+                    <Star className="w-3 h-3 fill-white" />
+                    Populair
+                  </span>
+                </div>
+              )}
+
+              <div className="text-center">
+                <h3 className="text-lg font-bold text-foreground mb-1">
+                  {label.name}
+                </h3>
+                <p className="text-xs text-muted mb-4">{label.desc}</p>
+
+                <div className="mb-5">
+                  <span className="text-3xl font-bold gradient-text">
+                    {currencySymbol}
+                    {option.price.toFixed(2)}
+                  </span>
+                  {option.duration > 1 && (
+                    <p className="text-xs text-muted mt-1">
+                      {currencySymbol}
+                      {(option.price / option.duration).toFixed(2)} / maand
+                    </p>
+                  )}
+                </div>
+
+                <div
+                  className={`py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                    isSelected
+                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
+                >
+                  {isSelected ? "Geselecteerd" : "Selecteer"}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-center text-xs text-muted">
+        incl. {taxRate}% {taxName}
+      </p>
 
       {/* Player Type Selection */}
       {playerTypes.length > 0 && (
@@ -301,11 +353,13 @@ export default function ProductForm({
       {/* Add to Cart Button */}
       <button
         onClick={handleAddToCart}
-        disabled={addedToCart}
+        disabled={addedToCart || !selectedOptionId}
         className={`w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center gap-3 ${
           addedToCart
             ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
-            : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:-translate-y-0.5"
+            : !selectedOptionId
+              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:-translate-y-0.5"
         }`}
       >
         {addedToCart ? (
@@ -316,7 +370,9 @@ export default function ProductForm({
         ) : (
           <>
             <ShoppingCart className="w-6 h-6" />
-            In winkelwagen
+            {selectedOption
+              ? `Bestellen — ${currencySymbol}${currentPrice.toFixed(2)}`
+              : "Kies eerst een abonnement"}
           </>
         )}
       </button>

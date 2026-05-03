@@ -28,6 +28,9 @@ model ProductOption {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   name      String
   price     Decimal @db.Decimal(10, 2)
+  screens   Int     @default(1)
+  duration  Int     @default(1)
+  popular   Boolean @default(false)
   sortOrder Int     @default(0)
   active    Boolean @default(true)
 

@@ -66,7 +66,6 @@ export default async function ProductDetailPage({
   const taxName = settings?.taxName ?? "BTW";
   const taxRate = settings?.taxRate ? Number(settings.taxRate) : 21;
 
-  // Serialize for client component
   const productData = {
     id: product.id,
     name: product.name,
@@ -74,10 +73,13 @@ export default async function ProductDetailPage({
     description: product.description,
     image: product.image,
     price: Number(product.price),
-    options: product.options.map((o: { id: string; name: string; price: unknown; sortOrder: number }) => ({
+    options: product.options.map((o: { id: string; name: string; price: unknown; screens: number; duration: number; popular: boolean; sortOrder: number }) => ({
       id: o.id,
       name: o.name,
       price: Number(o.price),
+      screens: o.screens,
+      duration: o.duration,
+      popular: o.popular,
       sortOrder: o.sortOrder,
     })),
   };
@@ -94,8 +96,7 @@ export default async function ProductDetailPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumb */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-muted hover:text-primary-600 font-medium mb-8 transition-colors duration-200"
@@ -104,54 +105,36 @@ export default async function ProductDetailPage({
           Terug naar overzicht
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Product Image */}
-          <div className="relative">
-            <div className="sticky top-24">
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-white shadow-lg border border-primary-100">
-                {product.image ? (
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-contain p-4"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    priority
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-primary-50">
-                    <div className="text-center">
-                      <div className="text-6xl mb-4">📺</div>
-                      <p className="text-muted text-sm">Geen afbeelding</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+        {/* Product Header */}
+        <div className="text-center mb-10">
+          {product.image && (
+            <div className="relative w-32 h-32 mx-auto mb-6 rounded-2xl overflow-hidden bg-white shadow-lg border border-primary-100">
+              <Image
+                src={product.image}
+                alt={product.name}
+                fill
+                className="object-contain p-3"
+                sizes="128px"
+                priority
+              />
             </div>
-          </div>
-
-          {/* Product Info + Form */}
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              {product.name}
-            </h1>
-
-            {/* Description */}
-            <div
-              className="text-muted leading-relaxed mb-8 prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: product.description }}
-            />
-
-            {/* Interactive Form */}
-            <ProductForm
-              product={productData}
-              playerTypes={playerTypesData}
-              currencySymbol={currencySymbol}
-              taxName={taxName}
-              taxRate={taxRate}
-            />
-          </div>
+          )}
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">
+            Onze <span className="gradient-text">Abonnementen</span>
+          </h1>
+          <p className="text-muted text-lg max-w-2xl mx-auto">
+            {product.description}
+          </p>
         </div>
+
+        {/* Interactive Form */}
+        <ProductForm
+          product={productData}
+          playerTypes={playerTypesData}
+          currencySymbol={currencySymbol}
+          taxName={taxName}
+          taxRate={taxRate}
+        />
       </div>
     </div>
   );
