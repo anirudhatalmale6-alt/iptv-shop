@@ -37,10 +37,11 @@ export async function POST(request: NextRequest) {
 
     const token = signToken(admin.id)
 
+    const isHttps = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https')
     const cookieStore = await cookies()
     cookieStore.set(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttps,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
