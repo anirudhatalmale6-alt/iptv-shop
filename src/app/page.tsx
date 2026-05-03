@@ -1,5 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Tv, Globe, Shield, Headphones, Star } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 
 const features = [
   {
@@ -24,30 +26,6 @@ const features = [
   },
 ];
 
-const packages = [
-  {
-    slug: "iptv-abonnement",
-    name: "1 Maand IPTV",
-    price: "14.99",
-    description: "Volledige toegang tot alle kanalen voor 1 maand",
-    popular: false,
-  },
-  {
-    slug: "iptv-abonnement",
-    name: "3 Maanden IPTV",
-    price: "34.99",
-    description: "Bespaar met ons kwartaalabonnement",
-    popular: true,
-  },
-  {
-    slug: "iptv-abonnement",
-    name: "12 Maanden IPTV",
-    price: "89.99",
-    description: "Beste waarde - een vol jaar IPTV",
-    popular: false,
-  },
-];
-
 const steps = [
   { number: "1", title: "Kies een abonnement", description: "Selecteer het plan dat bij u past." },
   { number: "2", title: "Selecteer uw speler", description: "Kies uw favoriete IPTV-app of apparaat." },
@@ -55,7 +33,25 @@ const steps = [
   { number: "4", title: "Geniet van IPTV!", description: "Start direct met kijken naar uw favoriete content." },
 ];
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const [products, settings] = await Promise.all([
+    prisma.product.findMany({
+      where: { active: true },
+      include: {
+        options: {
+          where: { active: true },
+          orderBy: { sortOrder: "asc" },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.siteSettings.findFirst(),
+  ]);
+
+  const currencySymbol = settings?.currencySymbol ?? "€";
+
   return (
     <>
       {/* Features Section - Top */}
@@ -94,50 +90,77 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Packages Section */}
+      {/* Products Section - Dynamic from database */}
       <section className="py-16 lg:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Onze <span className="gradient-text">Abonnementen</span>
+              Onze <span className="gradient-text">Pakketten</span>
             </h2>
             <p className="text-muted text-lg max-w-xl mx-auto">
-              Kies het abonnement dat het beste bij u past
+              Kies het pakket dat het beste bij u past
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {packages.map((pkg, index) => (
-              <Link
-                key={index}
-                href={`/product/${pkg.slug}`}
-                className={`card p-8 text-center relative group ${
-                  pkg.popular ? "ring-2 ring-purple-500 shadow-lg shadow-purple-500/10" : ""
-                }`}
-              >
-                {pkg.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center gap-1 gradient-cta text-white text-sm font-semibold px-4 py-1 rounded-full">
-                      <Star className="w-3 h-3 fill-white" />
-                      Populair
+          {products.length === 0 ? (
+            <p className="text-center text-muted">Geen producten beschikbaar.</p>
+          ) : (
+            <div className={`grid grid-cols-1 ${products.length === 2 ? 'md:grid-cols-2 max-w-3xl' : products.length >= 3 ? 'md:grid-cols-3' : 'max-w-md'} gap-8 mx-auto`}>
+              {products.map((product) => {
+                const lowestPrice = product.options.length > 0
+                  ? Math.min(...product.options.map((o: { price: unknown }) => Number(o.price)))
+                  : Number(product.price);
+                const hasPopular = product.options.some((o: { popular: boolean }) => o.popular);
+
+                return (
+                  <Link
+                    key={product.id}
+                    href={`/product/${product.slug}`}
+                    className={`card p-8 text-center relative group ${hasPopular ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-500/10' : ''}`}
+                  >
+                    {hasPopular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className="inline-flex items-center gap-1 gradient-cta text-white text-sm font-semibold px-4 py-1 rounded-full">
+                          <Star className="w-3 h-3 fill-white" />
+                          Populair
+                        </span>
+                      </div>
+                    )}
+
+                    {product.image ? (
+                      <div className="relative w-20 h-20 mx-auto mb-5 rounded-xl overflow-hidden bg-white shadow border border-gray-100">
+                        <Image
+                          src={product.image}
+                          alt={product.name}
+                          fill
+                          className="object-contain p-2"
+                          sizes="80px"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-20 h-20 mx-auto mb-5 rounded-xl bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center">
+                        <Tv className="w-8 h-8 text-primary-600" />
+                      </div>
+                    )}
+
+                    <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary-600 transition-colors">
+                      {product.name}
+                    </h3>
+                    <p className="text-muted text-sm mb-6 line-clamp-2">{product.description}</p>
+                    <div className="mb-6">
+                      <span className="text-sm text-muted">vanaf </span>
+                      <span className="text-4xl font-bold gradient-text">
+                        {currencySymbol}{lowestPrice.toFixed(2)}
+                      </span>
+                    </div>
+                    <span className="btn-primary w-full justify-center">
+                      Bekijk Opties
                     </span>
-                  </div>
-                )}
-                <h3 className="text-xl font-bold text-foreground mb-2 group-hover:text-primary-600 transition-colors">
-                  {pkg.name}
-                </h3>
-                <p className="text-muted text-sm mb-6">{pkg.description}</p>
-                <div className="mb-6">
-                  <span className="text-4xl font-bold gradient-text">
-                    &euro;{pkg.price}
-                  </span>
-                </div>
-                <span className="btn-primary w-full justify-center">
-                  Bestellen
-                </span>
-              </Link>
-            ))}
-          </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -181,7 +204,7 @@ export default function HomePage() {
               onbeperkt entertainment.
             </p>
             <Link
-              href={`/product/${packages[0].slug}`}
+              href="#products"
               className="inline-flex items-center justify-center bg-white text-primary-700 font-semibold px-8 py-4 rounded-xl text-lg hover:bg-primary-50 transition-all duration-300 hover:shadow-lg"
             >
               Bekijk Abonnementen
