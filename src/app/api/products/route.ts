@@ -3,13 +3,17 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('admin_token')?.value
+    const isAdmin = token ? !!verifyToken(token) : false
+
     const products = await prisma.product.findMany({
-      where: { active: true },
+      where: isAdmin ? {} : { active: true },
       include: {
         options: {
-          where: { active: true },
+          where: isAdmin ? {} : { active: true },
           orderBy: { sortOrder: 'asc' },
         },
       },
@@ -48,9 +52,12 @@ export async function POST(request: NextRequest) {
         active: active ?? true,
         options: options
           ? {
-              create: options.map((opt: { name: string; price: number; sortOrder?: number; active?: boolean }) => ({
+              create: options.map((opt: { name: string; price: number; screens?: number; duration?: number; popular?: boolean; sortOrder?: number; active?: boolean }) => ({
                 name: opt.name,
                 price: opt.price,
+                screens: opt.screens ?? 1,
+                duration: opt.duration ?? 1,
+                popular: opt.popular ?? false,
                 sortOrder: opt.sortOrder ?? 0,
                 active: opt.active ?? true,
               })),

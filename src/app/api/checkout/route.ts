@@ -123,7 +123,8 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
 
-    const session = await getStripe().checkout.sessions.create({
+    const stripe = await getStripe()
+    const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card', 'ideal'],
       mode: 'payment',
       customer_email: customerEmail,

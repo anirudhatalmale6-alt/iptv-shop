@@ -78,10 +78,13 @@ export async function PUT(
     if (options) {
       await prisma.productOption.deleteMany({ where: { productId: id } })
       await prisma.productOption.createMany({
-        data: options.map((opt: { name: string; price: number; sortOrder?: number; active?: boolean }) => ({
+        data: options.map((opt: { name: string; price: number; screens?: number; duration?: number; popular?: boolean; sortOrder?: number; active?: boolean }) => ({
           productId: id,
           name: opt.name,
           price: opt.price,
+          screens: opt.screens ?? 1,
+          duration: opt.duration ?? 1,
+          popular: opt.popular ?? false,
           sortOrder: opt.sortOrder ?? 0,
           active: opt.active ?? true,
         })),
