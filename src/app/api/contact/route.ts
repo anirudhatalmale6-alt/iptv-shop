@@ -5,7 +5,7 @@ import { sendMail } from '@/lib/mail'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, subject, message } = body
+    const { name, email, department, subject, message } = body
 
     if (!name || !email || !message) {
       return NextResponse.json(
@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get admin email from site settings
     const settings = await prisma.siteSettings.findFirst()
     const adminEmail = settings?.smtpFrom || process.env.ADMIN_EMAIL
 
@@ -33,6 +32,7 @@ export async function POST(request: NextRequest) {
 
         <div style="background: #f9f9f9; padding: 16px; border-radius: 8px; margin: 16px 0;">
           <p style="margin: 0;"><strong>From:</strong> ${name} (${email})</p>
+          ${department ? `<p style="margin: 8px 0 0;"><strong>Department:</strong> ${department}</p>` : ''}
           <p style="margin: 8px 0 0;"><strong>Subject:</strong> ${subject || 'No subject'}</p>
         </div>
 
@@ -44,9 +44,13 @@ export async function POST(request: NextRequest) {
       </div>
     `
 
+    const emailSubject = department
+      ? `[${department}] ${subject || 'New Message'} - from ${name}`
+      : `Contact Form: ${subject || 'New Message'} - from ${name}`
+
     await sendMail({
       to: adminEmail,
-      subject: `Contact Form: ${subject || 'New Message'} - from ${name}`,
+      subject: emailSubject,
       html: emailHtml,
     })
 

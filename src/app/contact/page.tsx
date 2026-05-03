@@ -1,16 +1,30 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { Mail, Phone } from "lucide-react";
 
+interface Department {
+  id: string;
+  name: string;
+}
+
 export default function ContactPage() {
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    department: "",
     subject: "",
     message: "",
   });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  useEffect(() => {
+    fetch("/api/departments")
+      .then((r) => r.json())
+      .then((data) => setDepartments(data))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -25,7 +39,7 @@ export default function ContactPage() {
 
       if (res.ok) {
         setStatus("success");
-        setFormData({ name: "", email: "", subject: "", message: "" });
+        setFormData({ name: "", email: "", department: "", subject: "", message: "" });
       } else {
         setStatus("error");
       }
@@ -37,7 +51,6 @@ export default function ContactPage() {
   return (
     <section className="py-16 lg:py-20">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
             Neem <span className="gradient-text">Contact</span> Op
@@ -48,7 +61,6 @@ export default function ContactPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Contact Info */}
           <div className="space-y-6">
             <div className="card p-5 flex items-start gap-4">
               <div className="shrink-0 w-10 h-10 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
@@ -71,7 +83,6 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* Contact Form */}
           <div className="md:col-span-2">
             <form onSubmit={handleSubmit} className="card p-6 space-y-5">
               <div>
@@ -113,6 +124,33 @@ export default function ContactPage() {
                   placeholder="uw@email.nl"
                 />
               </div>
+
+              {departments.length > 0 && (
+                <div>
+                  <label
+                    htmlFor="department"
+                    className="block text-sm font-medium text-foreground mb-1.5"
+                  >
+                    Afdeling
+                  </label>
+                  <select
+                    id="department"
+                    required
+                    value={formData.department}
+                    onChange={(e) =>
+                      setFormData({ ...formData, department: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 rounded-lg border border-primary-200 bg-white text-foreground focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all"
+                  >
+                    <option value="">-- Kies een afdeling --</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label

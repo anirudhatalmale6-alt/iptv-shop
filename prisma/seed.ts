@@ -152,6 +152,22 @@ async function main() {
     },
   })
 
+  const departments = [
+    { name: 'Speler Problemen', sortOrder: 0 },
+    { name: 'Betaling Problemen', sortOrder: 1 },
+    { name: 'Verlenging', sortOrder: 2 },
+    { name: 'Boekhouding', sortOrder: 3 },
+    { name: 'Technische Ondersteuning', sortOrder: 4 },
+    { name: 'Overig', sortOrder: 5 },
+  ]
+
+  for (const dept of departments) {
+    const existing = await prisma.contactDepartment.findFirst({ where: { name: dept.name } })
+    if (!existing) {
+      await prisma.contactDepartment.create({ data: dept })
+    }
+  }
+
   console.log('Seed completed successfully')
 }
 

@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X,
+  MessageSquare,
 } from 'lucide-react'
 
 interface AdminUser {
@@ -28,6 +29,7 @@ const navItems = [
   { href: '/admin/player-types', label: 'Player Types', icon: Gamepad2 },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { href: '/admin/faq', label: 'FAQ', icon: HelpCircle },
+  { href: '/admin/departments', label: 'Departments', icon: MessageSquare },
   { href: '/admin/pages', label: 'Pages', icon: FileText },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
