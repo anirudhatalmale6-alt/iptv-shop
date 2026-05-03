@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Plus, Pencil, Trash2, Copy } from 'lucide-react'
 
 interface ProductOption {
   id: string
@@ -22,8 +23,10 @@ interface Product {
 }
 
 export default function AdminProductsPage() {
+  const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [duplicating, setDuplicating] = useState<string | null>(null)
 
   useEffect(() => {
     fetchProducts()
@@ -62,9 +65,26 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function duplicateProduct(id: string) {
+    setDuplicating(id)
+    try {
+      const res = await fetch(`/api/products/${id}/duplicate`, { method: 'POST' })
+      if (res.ok) {
+        const newProduct = await res.json()
+        router.push(`/admin/products/${newProduct.id}/edit`)
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Failed to duplicate product')
+      }
+    } catch {
+      alert('Network error')
+    } finally {
+      setDuplicating(null)
+    }
+  }
+
   async function deleteProduct(id: string) {
     if (!confirm('Are you sure you want to delete this product?')) return
-
     try {
       const res = await fetch(`/api/products/${id}`, { method: 'DELETE' })
       if (res.ok) {
@@ -109,21 +129,11 @@ export default function AdminProductsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Options
-                  </th>
-                  <th className="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Active
-                  </th>
-                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Options</th>
+                  <th className="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
+                  <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -132,11 +142,7 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {product.image && (
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-10 h-10 rounded-lg object-cover bg-gray-100"
-                          />
+                          <img src={product.image} alt={product.name} className="w-10 h-10 rounded-lg object-cover bg-gray-100" />
                         )}
                         <div>
                           <p className="text-sm font-medium text-gray-900">{product.name}</p>
@@ -144,37 +150,37 @@ export default function AdminProductsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      &euro;{Number(product.price).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-500">
-                      {product.options.length}
-                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">&euro;{Number(product.price).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-500">{product.options.length}</td>
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => toggleActive(product)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          product.active ? 'bg-purple-600' : 'bg-gray-300'
-                        }`}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${product.active ? 'bg-purple-600' : 'bg-gray-300'}`}
                       >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            product.active ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.active ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => duplicateProduct(product.id)}
+                          disabled={duplicating === product.id}
+                          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                          title="Duplicate product"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
                         <Link
                           href={`/admin/products/${product.id}/edit`}
                           className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          title="Edit product"
                         >
                           <Pencil className="w-4 h-4" />
                         </Link>
                         <button
                           onClick={() => deleteProduct(product.id)}
                           className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete product"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
