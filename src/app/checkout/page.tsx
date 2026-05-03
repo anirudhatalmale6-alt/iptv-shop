@@ -8,6 +8,8 @@ import {
   Lock,
   CreditCard,
   Loader2,
+  Shield,
+  Tv,
 } from "lucide-react";
 
 interface CartItem {
@@ -30,7 +32,8 @@ const TAX_NAME = "BTW";
 export default function CheckoutPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [mounted, setMounted] = useState(false);
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,7 +53,7 @@ export default function CheckoutPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-pulse text-muted">Laden...</div>
       </div>
     );
@@ -65,7 +68,7 @@ export default function CheckoutPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gray-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center py-20">
             <div className="inline-flex items-center justify-center w-24 h-24 bg-primary-50 rounded-full mb-6">
@@ -93,7 +96,8 @@ export default function CheckoutPage() {
     e.preventDefault();
     setError("");
 
-    if (!name.trim() || !email.trim()) {
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    if (!fullName || !email.trim()) {
       setError("Vul alle verplichte velden in.");
       return;
     }
@@ -111,7 +115,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerName: name.trim(),
+          customerName: fullName,
           customerEmail: email.trim(),
           items: cartItems,
         }),
@@ -124,7 +128,6 @@ export default function CheckoutPage() {
       }
 
       if (data.url) {
-        // Clear cart before redirect
         localStorage.removeItem("cart");
         window.dispatchEvent(new Event("cart-updated"));
         window.location.href = data.url;
@@ -139,71 +142,135 @@ export default function CheckoutPage() {
     }
   }
 
+  const inputClass =
+    "w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-foreground placeholder:text-gray-400 outline-none transition-all duration-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-sm";
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        {/* Back link */}
         <Link
           href="/cart"
-          className="inline-flex items-center gap-2 text-muted hover:text-primary-600 font-medium mb-8 transition-colors duration-200"
+          className="inline-flex items-center gap-2 text-muted hover:text-primary-600 font-medium mb-8 transition-colors duration-200 text-sm"
         >
           <ArrowLeft className="w-4 h-4" />
           Terug naar winkelwagen
         </Link>
 
-        <h1 className="text-3xl font-bold text-foreground mb-8">Afrekenen</h1>
+        {/* Progress Steps */}
+        <div className="flex items-center justify-center gap-0 mb-10">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-semibold">
+              1
+            </div>
+            <span className="text-sm font-medium text-foreground hidden sm:block">Winkelwagen</span>
+          </div>
+          <div className="w-12 sm:w-20 h-0.5 bg-primary-600 mx-2" />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-semibold">
+              2
+            </div>
+            <span className="text-sm font-medium text-foreground hidden sm:block">Gegevens</span>
+          </div>
+          <div className="w-12 sm:w-20 h-0.5 bg-gray-300 mx-2" />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm font-semibold">
+              3
+            </div>
+            <span className="text-sm font-medium text-gray-400 hidden sm:block">Betaling</span>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Customer Form */}
-          <div className="lg:col-span-3">
-            <form onSubmit={handleSubmit}>
-              <div className="bg-white rounded-2xl shadow-lg border border-primary-100 p-6 mb-6">
-                <h2 className="font-bold text-lg text-foreground mb-6 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-primary-600" />
-                  Jouw gegevens
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          {/* Left - Customer Form */}
+          <div className="lg:col-span-7">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Contact Information */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
+                <h2 className="font-bold text-lg text-foreground mb-1">
+                  Contactgegevens
                 </h2>
+                <p className="text-muted text-sm mb-6">
+                  Vul je gegevens in om de bestelling af te ronden
+                </p>
 
-                <div className="space-y-5">
-                  <div>
-                    <label
-                      htmlFor="name"
-                      className="block text-sm font-medium text-foreground mb-1.5"
-                    >
-                      Volledige naam <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Jan Jansen"
-                      required
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-foreground placeholder:text-gray-400 outline-none transition-all duration-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
-                    />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Voornaam <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        className={inputClass}
+                        placeholder="Jan"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Achternaam <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        className={inputClass}
+                        placeholder="Jansen"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-sm font-medium text-foreground mb-1.5"
-                    >
-                      E-mailadres <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      E-mailadres <span className="text-red-400">*</span>
                     </label>
                     <input
-                      id="email"
                       type="email"
+                      required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      className={inputClass}
                       placeholder="jan@voorbeeld.nl"
-                      required
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white text-foreground placeholder:text-gray-400 outline-none transition-all duration-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
                     />
+                    <p className="text-xs text-muted mt-1.5">
+                      Je ontvangt een bevestiging en activatiegegevens op dit adres
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method Preview */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
+                <h2 className="font-bold text-lg text-foreground mb-1">
+                  Betaalmethode
+                </h2>
+                <p className="text-muted text-sm mb-6">
+                  Je wordt doorgestuurd naar Stripe om veilig te betalen
+                </p>
+
+                <div className="flex flex-wrap items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
+                    <CreditCard className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">Card</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
+                    <span className="text-sm font-bold text-[#CC0066]">iDEAL</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
+                    <span className="text-sm font-bold text-blue-600">Bancontact</span>
                   </div>
                 </div>
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-xl text-sm flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-red-600 text-xs font-bold">!</span>
+                  </div>
                   {error}
                 </div>
               )}
@@ -211,43 +278,53 @@ export default function CheckoutPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-xl font-semibold text-lg hover:from-purple-700 hover:to-indigo-700 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-xl font-semibold text-base hover:from-purple-700 hover:to-indigo-700 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     Bezig met doorsturen...
                   </>
                 ) : (
                   <>
                     <Lock className="w-5 h-5" />
-                    Betaal met Stripe
+                    Doorgaan naar betaling — &euro;{total.toFixed(2)}
                   </>
                 )}
               </button>
 
-              <p className="text-center text-xs text-muted mt-3 flex items-center justify-center gap-1">
-                <Lock className="w-3 h-3" />
-                Veilige betaling via Stripe
-              </p>
+              {/* Trust badges */}
+              <div className="flex items-center justify-center gap-6 text-xs text-muted">
+                <span className="flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  SSL Beveiligd
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" />
+                  Veilige betaling
+                </span>
+              </div>
             </form>
           </div>
 
-          {/* Order Summary Sidebar */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-lg border border-primary-100 p-6 sticky top-24">
+          {/* Right - Order Summary */}
+          <div className="lg:col-span-5">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8 sticky top-24">
               <h2 className="font-bold text-lg text-foreground mb-6">
-                Bestelling
+                Besteloverzicht
               </h2>
 
               <div className="space-y-4 mb-6">
                 {cartItems.map((item) => (
                   <div
                     key={item.id}
-                    className="flex justify-between gap-3 pb-4 border-b border-gray-100 last:border-0 last:pb-0"
+                    className="flex gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0"
                   >
+                    <div className="shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center">
+                      <Tv className="w-6 h-6 text-primary-600" />
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground text-sm truncate">
+                      <p className="font-semibold text-foreground text-sm">
                         {item.productName}
                       </p>
                       {item.optionName && (
@@ -260,18 +337,24 @@ export default function CheckoutPage() {
                           {item.playerTypeName}
                         </p>
                       )}
+                      {item.playerMac && (
+                        <p className="text-xs text-gray-400 font-mono mt-1">
+                          MAC: {item.playerMac}
+                        </p>
+                      )}
                     </div>
-                    <span className="font-medium text-sm text-foreground whitespace-nowrap">
+                    <span className="font-semibold text-sm text-foreground whitespace-nowrap">
                       &euro;{item.price.toFixed(2)}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div className="space-y-3 pt-4 border-t border-primary-100">
+              {/* Totals */}
+              <div className="space-y-3 pt-4 border-t border-gray-200">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted">Subtotaal</span>
-                  <span className="font-medium text-foreground">
+                  <span className="text-foreground">
                     &euro;{subtotal.toFixed(2)}
                   </span>
                 </div>
@@ -279,16 +362,35 @@ export default function CheckoutPage() {
                   <span className="text-muted">
                     {TAX_NAME} ({(TAX_RATE * 100).toFixed(0)}%)
                   </span>
-                  <span className="font-medium text-foreground">
+                  <span className="text-foreground">
                     &euro;{taxAmount.toFixed(2)}
                   </span>
                 </div>
-                <div className="border-t border-primary-100 pt-3">
-                  <div className="flex justify-between">
-                    <span className="font-bold text-foreground">Totaal</span>
-                    <span className="font-bold text-xl gradient-text">
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-foreground text-base">Totaal</span>
+                    <span className="font-bold text-2xl gradient-text">
                       &euro;{total.toFixed(2)}
                     </span>
+                  </div>
+                  <p className="text-xs text-muted mt-1 text-right">
+                    Inclusief {TAX_NAME}
+                  </p>
+                </div>
+              </div>
+
+              {/* Security note */}
+              <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-green-800">
+                      Veilig winkelen
+                    </p>
+                    <p className="text-xs text-green-700 mt-0.5">
+                      Alle betalingen worden verwerkt via Stripe met 256-bit SSL
+                      encryptie.
+                    </p>
                   </div>
                 </div>
               </div>
